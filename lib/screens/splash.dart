@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF00C853), Color(0xFF00897B)],
+            colors: [Color(0xFF1565C0), Color(0xFF0288D1)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -82,7 +82,7 @@ class _SplashScreenState extends State<SplashScreen>
                       ],
                     ),
                     child: const Icon(Icons.account_balance_wallet,
-                        size: 50, color: Color(0xFF00C853)),
+                        size: 50, color: Color(0xFF1565C0)),
                   ),
                   const SizedBox(height: 20),
                   const Text('Finance AI',

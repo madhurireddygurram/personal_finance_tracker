@@ -134,9 +134,9 @@ class ThemeService {
   ];
 
   static AppTheme get active {
-    final id = _box.get(_key, defaultValue: 'emerald') as String;
+    final id = _box.get(_key, defaultValue: 'ocean') as String;
     return themes.firstWhere((t) => t.id == id,
-        orElse: () => themes.first);
+        orElse: () => themes.firstWhere((t) => t.id == 'ocean'));
   }
 
   static Future<void> setTheme(String id) async {
