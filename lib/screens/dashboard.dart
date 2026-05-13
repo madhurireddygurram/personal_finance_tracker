@@ -84,6 +84,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 20),
               _insightCard(provider, currency),
               const SizedBox(height: 20),
+              _smartTrends(provider, currency),
+              const SizedBox(height: 20),
               _sectionTitle('Goals', onTap: () {}),
               const SizedBox(height: 12),
               _goalsPreview(goalProvider, currency),
@@ -1038,6 +1040,271 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ── Goals preview — only user-created goals ───────────────
+  // ── Smart Trends ───────────────────────────────────────────────
+  Widget _smartTrends(ExpenseProvider p, String currency) {
+    final expenses = p.onlyExpenses;
+    if (expenses.isEmpty) return const SizedBox.shrink();
+
+    final primary = Theme.of(context).colorScheme.primary;
+    final now     = DateTime.now();
+
+    // ── 7-day daily spending data ─────────────────────────
+    final List<double> dailySpend = List.generate(7, (i) {
+      final day = DateTime(now.year, now.month, now.day)
+          .subtract(Duration(days: 6 - i));
+      return expenses
+          .where((e) =>
+              e.date.year == day.year &&
+              e.date.month == day.month &&
+              e.date.day == day.day)
+          .fold(0.0, (s, e) => s + e.amount);
+    });
+
+    // ── Category totals this month ────────────────────────
+    final month = DateTime(now.year, now.month, 1);
+    final catTotals = <String, double>{};
+    for (final e in expenses.where((e) => e.date.isAfter(month))) {
+      catTotals[e.category] = (catTotals[e.category] ?? 0) + e.amount;
+    }
+    final sortedCats = catTotals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topCats = sortedCats.take(4).toList();
+    final catMax  = topCats.isEmpty ? 1.0 : topCats.first.value;
+
+    // ── Trend summary stats ───────────────────────────────
+    final thisWeekTotal = dailySpend.fold(0.0, (s, v) => s + v);
+    final dailyAvg      = thisWeekTotal / 7;
+    final budget        = UserService.budget;
+    final monthSpend    = expenses
+        .where((e) => e.date.isAfter(month))
+        .fold(0.0, (s, e) => s + e.amount);
+    final projected     = now.day > 0 ? (monthSpend / now.day) * 30 : 0.0;
+
+    const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    // Map today's weekday to the last label
+    final startOffset = (now.weekday - 1) % 7;
+    final labels = List.generate(7,
+        (i) => dayLabels[(startOffset - 6 + i + 7) % 7]);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8, offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.show_chart_rounded, color: primary, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Smart Trends',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ],
+              ),
+              // Projected badge
+              if (budget > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: projected > budget
+                        ? const Color(0xFFFF5252).withValues(alpha: 0.1)
+                        : primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    projected > budget ? 'Over projected' : 'On track',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: projected > budget
+                            ? const Color(0xFFFF5252)
+                            : primary),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ── 7-day line chart ──────────────────────────
+          Text('7-Day Spending',
+              style: TextStyle(color: Colors.grey.shade500,
+                  fontSize: 12, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 120,
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (_) =>
+                      FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 22,
+                      getTitlesWidget: (v, _) {
+                        final i = v.toInt();
+                        if (i < 0 || i >= labels.length)
+                          return const SizedBox.shrink();
+                        return Text(labels[i],
+                            style: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 9));
+                      },
+                    ),
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: List.generate(7,
+                        (i) => FlSpot(i.toDouble(), dailySpend[i])),
+                    isCurved: true,
+                    color: primary,
+                    barWidth: 2.5,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, _, __, ___) =>
+                          FlDotCirclePainter(
+                              radius: 3,
+                              color: primary,
+                              strokeWidth: 1.5,
+                              strokeColor: Colors.white),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        colors: [
+                          primary.withValues(alpha: 0.2),
+                          primary.withValues(alpha: 0.0),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Stats row ─────────────────────────────────
+          Row(
+            children: [
+              _trendStat('Daily Avg',
+                  '$currency${dailyAvg.toStringAsFixed(0)}',
+                  Icons.today_rounded, primary),
+              _trendDivider(),
+              _trendStat('This Week',
+                  '$currency${thisWeekTotal.toStringAsFixed(0)}',
+                  Icons.date_range_rounded, const Color(0xFF7C4DFF)),
+              _trendDivider(),
+              _trendStat('Projected',
+                  '$currency${projected.toStringAsFixed(0)}',
+                  Icons.trending_up_rounded,
+                  projected > budget && budget > 0
+                      ? const Color(0xFFFF5252)
+                      : primary),
+            ],
+          ),
+
+          if (topCats.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Divider(color: Colors.grey.shade100),
+            const SizedBox(height: 12),
+
+            // ── Category mini bars ────────────────────
+            Text('Top Categories This Month',
+                style: TextStyle(color: Colors.grey.shade500,
+                    fontSize: 12, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 12),
+            ...topCats.map((entry) {
+              final color = _catColors[entry.key] ?? Colors.grey;
+              final pct   = catMax > 0 ? entry.value / catMax : 0.0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 80,
+                      child: Text(entry.key,
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: pct,
+                          minHeight: 8,
+                          backgroundColor: Colors.grey.shade100,
+                          valueColor: AlwaysStoppedAnimation(color),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('$currency${entry.value.toStringAsFixed(0)}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: color)),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _trendStat(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(height: 4),
+          Text(value,
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 13, color: color)),
+          Text(label,
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _trendDivider() =>
+      Container(width: 1, height: 36, color: Colors.grey.shade200);
+
   Widget _goalsPreview(GoalProvider gp, String currency) {
     if (gp.goals.isEmpty) {
       return Container(
@@ -1251,4 +1518,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 
 
+
+
+class _Trend {
+  final IconData icon;
+  final Color color;
+  final String text;
+  const _Trend({required this.icon, required this.color, required this.text});
+}
 

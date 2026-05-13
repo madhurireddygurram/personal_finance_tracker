@@ -27,6 +27,11 @@ class GoalProvider extends ChangeNotifier {
     loadGoals();
   }
 
+  Future<void> updateGoal(Goal goal) async {
+    await HiveService.updateGoal(goal);
+    loadGoals();
+  }
+
   // Add money to a goal AND deduct from balance via an expense transaction
   Future<void> addMoney(
       Goal goal, double amount, ExpenseProvider expenseProvider) async {
