@@ -50,25 +50,33 @@ class GamificationService {
     final budget  = UserService.budget.toDouble();
     final savings = UserService.savings;
 
-    if (income <= 0) return 0;
+    // No score until user has set up income AND logged at least one real expense
+    final realExpenses = expenses.where((e) =>
+        e.isExpense &&
+        e.category != 'Savings' &&
+        e.category != 'Goals').toList();
 
-    // 1. Savings rate (max 40 pts) — 20% savings = full 40 pts
-    final savingsRate = (savings / income).clamp(0.0, 0.2);
-    score += (savingsRate / 0.2 * 40).toInt();
+    if (income <= 0 || realExpenses.isEmpty) return 0;
 
-    // 2. Budget adherence (max 30 pts)
+    // 1. Savings rate (max 40 pts) — savings must be > 0
+    if (savings > 0) {
+      final savingsRate = (savings / income).clamp(0.0, 0.2);
+      score += (savingsRate / 0.2 * 40).toInt();
+    }
+
+    // 2. Budget adherence (max 30 pts) — budget must be set
     if (budget > 0) {
-      final totalExp = expenses
-          .where((e) => e.isExpense && e.category != 'Savings' && e.category != 'Goals')
-          .fold(0.0, (s, e) => s + e.amount);
+      final totalExp = realExpenses.fold(0.0, (s, e) => s + e.amount);
       final ratio = (totalExp / budget).clamp(0.0, 2.0);
       if (ratio <= 1.0) score += (30 * (1 - ratio * 0.5)).toInt();
     }
 
-    // 3. Streak bonus (max 20 pts) — 30-day streak = full 20 pts
-    score += (streak.clamp(0, 30) / 30 * 20).toInt();
+    // 3. Streak bonus (max 20 pts) — streak must be > 0
+    if (streak > 0) {
+      score += (streak.clamp(0, 30) / 30 * 20).toInt();
+    }
 
-    // 4. Has savings at all (10 pts)
+    // 4. Has savings (10 pts) — savings must be > 0
     if (savings > 0) score += 10;
 
     return score.clamp(0, 100);
@@ -87,9 +95,20 @@ class GamificationService {
     final income  = UserService.income;
     final savings = UserService.savings;
     final budget  = UserService.budget;
-    final totalExp = expenses
-        .where((e) => e.isExpense && e.category != 'Savings' && e.category != 'Goals')
-        .fold(0.0, (s, e) => s + e.amount);
+
+    // Only count real spending expenses (not savings/goals/income)
+    final realExpenses = expenses.where((e) =>
+        e.isExpense &&
+        e.category != 'Savings' &&
+        e.category != 'Goals').toList();
+
+    final totalExp = realExpenses.fold(0.0, (s, e) => s + e.amount);
+
+    // Only count real spending categories (not system categories)
+    final spendingCategories = realExpenses
+        .map((e) => e.category)
+        .where((c) => c != 'Income' && c != 'Savings' && c != 'Goals')
+        .toSet();
 
     return [
       AchievementBadge(
@@ -98,7 +117,8 @@ class GamificationService {
         desc: 'Log your first expense',
         icon: 'wallet',
         color: 0xFF00C853,
-        unlocked: expenses.isNotEmpty,
+        // Must have at least 1 real expense
+        unlocked: realExpenses.isNotEmpty,
       ),
       AchievementBadge(
         id: 'saver',
@@ -106,7 +126,8 @@ class GamificationService {
         desc: 'Save at least 10% of income',
         icon: 'savings',
         color: 0xFF00897B,
-        unlocked: income > 0 && savings >= income * 0.1,
+        // Must have income AND savings > 0 AND savings >= 10% of income
+        unlocked: income > 0 && savings > 0 && savings >= income * 0.1,
       ),
       AchievementBadge(
         id: 'super_saver',
@@ -114,7 +135,7 @@ class GamificationService {
         desc: 'Save at least 20% of income',
         icon: 'star',
         color: 0xFFFFD700,
-        unlocked: income > 0 && savings >= income * 0.2,
+        unlocked: income > 0 && savings > 0 && savings >= income * 0.2,
       ),
       AchievementBadge(
         id: 'budget_master',
@@ -122,7 +143,8 @@ class GamificationService {
         desc: 'Stay within budget this month',
         icon: 'shield',
         color: 0xFF3D5AFE,
-        unlocked: budget > 0 && totalExp <= budget,
+        // Must have budget set AND at least 1 real expense AND within budget
+        unlocked: budget > 0 && realExpenses.isNotEmpty && totalExp <= budget,
       ),
       AchievementBadge(
         id: 'streak_3',
@@ -151,18 +173,20 @@ class GamificationService {
       AchievementBadge(
         id: 'no_overspend',
         title: 'No Overspend',
-        desc: 'Stay under budget for a full month',
+        desc: 'Stay under 90% of budget for a full month',
         icon: 'check',
         color: 0xFF00BCD4,
-        unlocked: budget > 0 && totalExp < budget * 0.9,
+        // Must have budget AND real expenses AND under 90% of budget
+        unlocked: budget > 0 && realExpenses.isNotEmpty && totalExp < budget * 0.9,
       ),
       AchievementBadge(
         id: 'diversified',
         title: 'Diversified',
-        desc: 'Track expenses in 5+ categories',
+        desc: 'Track expenses in 5+ spending categories',
         icon: 'chart',
         color: 0xFFFF4081,
-        unlocked: expenses.map((e) => e.category).toSet().length >= 5,
+        // Only count real spending categories, not system ones
+        unlocked: spendingCategories.length >= 5,
       ),
       AchievementBadge(
         id: 'century',
@@ -170,7 +194,8 @@ class GamificationService {
         desc: 'Log 100 transactions',
         icon: 'hundred',
         color: 0xFF9C27B0,
-        unlocked: expenses.length >= 100,
+        // Only count real expenses
+        unlocked: realExpenses.length >= 100,
       ),
     ];
   }
@@ -181,10 +206,16 @@ class GamificationService {
     final week  = now.subtract(const Duration(days: 7));
     final month = DateTime(now.year, now.month, 1);
 
-    final weekExpenses = expenses.where(
-        (e) => e.isExpense && e.date.isAfter(week)).toList();
-    final monthExpenses = expenses.where(
-        (e) => e.isExpense && e.date.isAfter(month)).toList();
+    // Only real spending expenses
+    final realExpenses = expenses.where((e) =>
+        e.isExpense &&
+        e.category != 'Savings' &&
+        e.category != 'Goals').toList();
+
+    final weekExpenses = realExpenses
+        .where((e) => e.date.isAfter(week)).toList();
+    final monthExpenses = realExpenses
+        .where((e) => e.date.isAfter(month)).toList();
 
     final foodThisWeek = weekExpenses
         .where((e) => e.category == 'Food')
@@ -192,8 +223,14 @@ class GamificationService {
     final entertainmentThisMonth = monthExpenses
         .where((e) => e.category == 'Entertainment')
         .fold(0.0, (s, e) => s + e.amount);
-    final budget = UserService.budget;
+    final budget        = UserService.budget;
     final totalMonthExp = monthExpenses.fold(0.0, (s, e) => s + e.amount);
+
+    // Has the user logged anything this week / month?
+    final hasWeekData  = weekExpenses.isNotEmpty;
+    final hasMonthData = monthExpenses.isNotEmpty;
+    final hasFoodData  = weekExpenses.any((e) => e.category == 'Food');
+    final hasEntData   = monthExpenses.any((e) => e.category == 'Entertainment');
 
     return [
       Challenge(
@@ -203,8 +240,11 @@ class GamificationService {
         icon: Icons_challenge.restaurant,
         color: 0xFF00C853,
         target: 200,
-        current: foodThisWeek,
+        // Only show real progress if user has logged food this week
+        // If no food logged yet, current = target so progress = 0 (not complete)
+        current: hasFoodData ? foodThisWeek : 200,
         isLower: true,
+        hasData: hasWeekData,
       ),
       Challenge(
         id: 'no_entertainment',
@@ -213,8 +253,9 @@ class GamificationService {
         icon: Icons_challenge.movie,
         color: 0xFFFF4081,
         target: 500,
-        current: entertainmentThisMonth,
+        current: hasEntData ? entertainmentThisMonth : 500,
         isLower: true,
+        hasData: hasMonthData,
       ),
       Challenge(
         id: 'budget_80',
@@ -223,8 +264,10 @@ class GamificationService {
         icon: Icons_challenge.shield,
         color: 0xFF3D5AFE,
         target: budget * 0.8,
-        current: totalMonthExp,
+        // No data = not started, show 0 progress
+        current: hasMonthData ? totalMonthExp : 0,
         isLower: true,
+        hasData: hasMonthData && budget > 0,
       ),
       Challenge(
         id: 'streak_7',
@@ -235,6 +278,7 @@ class GamificationService {
         target: 7,
         current: streak.toDouble(),
         isLower: false,
+        hasData: streak > 0,
       ),
       Challenge(
         id: 'save_10pct',
@@ -245,6 +289,7 @@ class GamificationService {
         target: UserService.income * 0.1,
         current: UserService.savings,
         isLower: false,
+        hasData: UserService.savings > 0,
       ),
     ];
   }
@@ -271,7 +316,8 @@ class Challenge {
   final String icon;
   final int color;
   final double target, current;
-  final bool isLower; // true = lower is better (spending), false = higher is better (saving)
+  final bool isLower;
+  final bool hasData; // true = user has relevant data to evaluate this challenge
 
   const Challenge({
     required this.id,
@@ -282,9 +328,12 @@ class Challenge {
     required this.target,
     required this.current,
     required this.isLower,
+    this.hasData = false,
   });
 
   double get progress {
+    // No data = no progress
+    if (!hasData) return 0;
     if (target <= 0) return 0;
     if (isLower) {
       return (1 - (current / target)).clamp(0.0, 1.0);
@@ -293,7 +342,8 @@ class Challenge {
     }
   }
 
-  bool get completed => progress >= 1.0;
+  // Only mark complete if user has data AND actually met the condition
+  bool get completed => hasData && progress >= 1.0;
 }
 
 // Icon string constants for challenges

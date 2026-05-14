@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/goal.dart';
+import '../providers/goal_provider.dart';
 import '../services/user_service.dart';
 import 'home.dart';
 
@@ -9,12 +12,14 @@ class SetupScreen extends StatefulWidget {
 }
 
 class _SetupScreenState extends State<SetupScreen> {
-  final _incomeCtrl = TextEditingController();
-  final _budgetCtrl = TextEditingController();
-  final _goalCtrl   = TextEditingController();
+  final _incomeCtrl    = TextEditingController();
+  final _budgetCtrl    = TextEditingController();
+  final _goalNameCtrl  = TextEditingController();
+  final _goalAmountCtrl = TextEditingController();
+  DateTime _goalDeadline = DateTime.now().add(const Duration(days: 90));
 
   bool _isStudent = false;
-  int  _step      = 0; // 0 = role, 1 = money, 2 = currency+goal
+  int  _step      = 0;
 
   // 20+ currencies: display label → symbol
   static const _currencies = {
@@ -50,7 +55,8 @@ class _SetupScreenState extends State<SetupScreen> {
   void dispose() {
     _incomeCtrl.dispose();
     _budgetCtrl.dispose();
-    _goalCtrl.dispose();
+    _goalNameCtrl.dispose();
+    _goalAmountCtrl.dispose();
     super.dispose();
   }
 
@@ -68,25 +74,36 @@ class _SetupScreenState extends State<SetupScreen> {
     final label  = _isStudent ? 'pocket money' : 'income';
 
     if (income == null || income <= 0) {
-      _snack('Please enter a valid monthly $label');
-      return;
+      _snack('Please enter a valid monthly $label'); return;
     }
     if (budget == null || budget <= 0) {
-      _snack('Please enter a valid monthly budget');
-      return;
+      _snack('Please enter a valid monthly budget'); return;
     }
     if (budget > income) {
-      _snack('Budget cannot exceed your $label');
-      return;
+      _snack('Budget cannot exceed your $label'); return;
     }
+
+    final symbol = _currencies[_selectedCurrency]!;
+    final goalName   = _goalNameCtrl.text.trim();
+    final goalAmount = double.tryParse(_goalAmountCtrl.text.trim()) ?? 0;
 
     await UserService.saveSetup(
       income   : income,
       budget   : budget,
-      currency : _currencies[_selectedCurrency]!,
-      goal     : _goalCtrl.text.trim(),
+      currency : symbol,
+      goal     : goalName,
       isStudent: _isStudent,
     );
+
+    // Auto-create the goal in the Goals tab if user filled it in
+    if (goalName.isNotEmpty && goalAmount > 0 && mounted) {
+      await context.read<GoalProvider>().addGoal(Goal(
+        name        : goalName,
+        targetAmount: goalAmount,
+        savedAmount : 0,
+        deadline    : _goalDeadline,
+      ));
+    }
 
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -468,95 +485,84 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
+
   // ── Step 3: Currency + Goal ───────────────────────────────
   Widget _stepCurrencyGoal() {
-    return Column(
-      key: const ValueKey(2),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Almost done!',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        Text('Choose your currency and set an optional goal',
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
-        const SizedBox(height: 32),
+    final primary = Theme.of(context).colorScheme.primary;
+    return StatefulBuilder(
+      builder: (_, setInner) => Column(
+        key: const ValueKey(2),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Almost done!',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text('Choose your currency and set a financial goal',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
+          const SizedBox(height: 32),
 
-        // Currency picker
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
+          // Currency picker
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [BoxShadow(
                   color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2))
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
+                  blurRadius: 10, offset: const Offset(0, 2))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      color: primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.currency_exchange_rounded,
-                        color: Color(0xFF00C853), size: 20),
+                    child: Icon(Icons.currency_exchange_rounded,
+                        color: primary, size: 20),
                   ),
                   const SizedBox(width: 10),
                   const Text('Currency',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
-                ],
-              ),
-              const SizedBox(height: 14),
-              DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedCurrency,
-                  isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                      color: Color(0xFF00C853)),
-                  style: const TextStyle(
-                      fontSize: 14, color: Colors.black87),
-                  items: _currencies.keys
-                      .map((k) => DropdownMenuItem(
-                          value: k,
-                          child: Text(k,
-                              overflow: TextOverflow.ellipsis)))
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _selectedCurrency = v!),
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                ]),
+                const SizedBox(height: 14),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedCurrency,
+                    isExpanded: true,
+                    icon: Icon(Icons.keyboard_arrow_down_rounded, color: primary),
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                    items: _currencies.keys
+                        .map((k) => DropdownMenuItem(
+                            value: k,
+                            child: Text(k, overflow: TextOverflow.ellipsis)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedCurrency = v!),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
 
-        const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-        // Goal (optional)
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
+          // Goal card — name + amount + deadline
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [BoxShadow(
                   color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2))
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
+                  blurRadius: 10, offset: const Offset(0, 2))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -568,40 +574,127 @@ class _SetupScreenState extends State<SetupScreen> {
                   ),
                   const SizedBox(width: 10),
                   const Text('Financial Goal',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text('Optional',
-                        style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 11)),
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                  ),
+                ]),
+                const SizedBox(height: 4),
+                Text('This will be added directly to your Goals tab',
+                    style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                const SizedBox(height: 16),
+
+                // Goal name
+                TextField(
+                  controller: _goalNameCtrl,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'Goal Name',
+                    hintText: 'e.g. Buy a laptop, Trip to Goa...',
+                    prefixIcon: Icon(Icons.flag_outlined),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Target amount
+                TextField(
+                  controller: _goalAmountCtrl,
+                  onChanged: (_) => setState(() {}),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Target Amount',
+                    hintText: 'e.g. 50000',
+                    prefixIcon: const Icon(Icons.track_changes_rounded),
+                    prefixText: '${_currencies[_selectedCurrency] ?? '₹'} ',
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Deadline picker
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _goalDeadline,
+                      firstDate: DateTime.now().add(const Duration(days: 1)),
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                    );
+                    if (picked != null) setState(() => _goalDeadline = picked);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(children: [
+                      Icon(Icons.calendar_today_outlined, size: 18, color: primary),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Target Deadline',
+                              style: TextStyle(
+                                  color: Colors.grey.shade500, fontSize: 11)),
+                          Text(_fmtDate(_goalDeadline),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 14)),
+                        ],
+                      ),
+                      const Spacer(),
+                      Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+                    ]),
+                  ),
+                ),
+
+                // Live preview chip
+                if (_goalNameCtrl.text.isNotEmpty &&
+                    _goalAmountCtrl.text.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C4DFF).withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: const Color(0xFF7C4DFF).withValues(alpha: 0.2)),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.check_circle_outline_rounded,
+                          color: Color(0xFF7C4DFF), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '"${_goalNameCtrl.text.trim()}" will be created in your Goals tab automatically!',
+                          style: const TextStyle(
+                              color: Color(0xFF7C4DFF),
+                              fontSize: 12, height: 1.4),
+                        ),
+                      ),
+                    ]),
                   ),
                 ],
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _goalCtrl,
-                decoration: InputDecoration(
-                  hintText: 'e.g. Buy a laptop, Trip to Goa...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
-                  border: InputBorder.none,
-                  filled: false,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 32),
-      ],
+          const SizedBox(height: 32),
+        ],
+      ),
     );
+  }
+
+  String _fmtDate(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 }
 

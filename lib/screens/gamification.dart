@@ -267,10 +267,11 @@ class _GamificationScreenState extends State<GamificationScreen> {
                   ],
                 ),
               ),
+              // Show 0/target when no data yet, real current when data exists
               Text(
                 c.isLower
-                    ? '$currency${c.current.toStringAsFixed(0)} / $currency${c.target.toStringAsFixed(0)}'
-                    : '${c.current.toStringAsFixed(0)} / ${c.target.toStringAsFixed(0)}',
+                    ? '$currency${c.hasData ? c.current.toStringAsFixed(0) : '0'} / $currency${c.target.toStringAsFixed(0)}'
+                    : '${c.hasData ? c.current.toStringAsFixed(0) : '0'} / ${c.target.toStringAsFixed(0)}',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
               ),
             ],
@@ -286,8 +287,14 @@ class _GamificationScreenState extends State<GamificationScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Text('${(c.progress * 100).toInt()}% complete',
-              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+          Text(
+            c.hasData
+                ? '${(c.progress * 100).toInt()}% complete'
+                : 'Not started — add transactions to track progress',
+            style: TextStyle(
+                color: c.hasData ? color : Colors.grey.shade400,
+                fontSize: 11,
+                fontWeight: FontWeight.w600)),
         ],
       ),
     );

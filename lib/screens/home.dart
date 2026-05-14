@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard.dart';
 import 'transactions.dart';
+import 'quick_scan.dart';
 import 'add_expense.dart';
 import 'goals.dart';
 import 'savings.dart';
@@ -15,10 +16,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
 
+  // 0=Home, 1=Txns, 2=Scan, FAB=center, 3=Savings, 4=Goals, 5=Profile
   final _screens = const [
     DashboardScreen(),
     TransactionsScreen(),
-    SizedBox.shrink(),
+    QuickScanScreen(),
+    SizedBox.shrink(), // FAB placeholder
     SavingsScreen(),
     GoalsScreen(),
     ProfileScreen(),
@@ -28,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      body: _screens[_index],
+      body: _index == 3 ? _screens[0] : _screens[_index],
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(context,
             MaterialPageRoute(builder: (_) => const AddExpenseScreen())),
@@ -43,12 +46,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _navItem(Icons.home_rounded, 'Home', 0, primary),
-            _navItem(Icons.receipt_long_rounded, 'Txns', 1, primary),
-            const SizedBox(width: 48),
-            _navItem(Icons.savings_rounded, 'Savings', 3, primary),
-            _navItem(Icons.flag_rounded, 'Goals', 4, primary),
-            _navItem(Icons.person_rounded, 'Profile', 5, primary),
+            _navItem(Icons.home_rounded,             'Home',    0, primary),
+            _navItem(Icons.receipt_long_rounded,     'Txns',    1, primary),
+            _navItem(Icons.document_scanner_rounded, 'Scan',    2, primary),
+            const SizedBox(width: 48), // FAB notch
+            _navItem(Icons.savings_rounded,          'Savings', 4, primary),
+            _navItem(Icons.flag_rounded,             'Goals',   5, primary),
+            _navItem(Icons.person_rounded,           'Profile', 6, primary),
           ],
         ),
       ),
@@ -61,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => setState(() => _index = i),
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -70,11 +74,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                     fontSize: 10,
                     color: active ? primary : Colors.grey,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.normal)),
+                    fontWeight:
+                        active ? FontWeight.w600 : FontWeight.normal)),
           ],
         ),
       ),
     );
   }
 }
-

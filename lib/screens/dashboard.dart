@@ -1043,9 +1043,115 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ── Smart Trends ───────────────────────────────────────────────
   Widget _smartTrends(ExpenseProvider p, String currency) {
     final expenses = p.onlyExpenses;
-    if (expenses.isEmpty) return const SizedBox.shrink();
+    final primary  = Theme.of(context).colorScheme.primary;
 
-    final primary = Theme.of(context).colorScheme.primary;
+    // Show teaser card when no expenses yet
+    if (expenses.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8, offset: const Offset(0, 2))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.show_chart_rounded, color: primary, size: 16),
+                ),
+                const SizedBox(width: 8),
+                const Text('Smart Trends',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('Unlocks with data',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: primary)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Skeleton preview bars
+            Text('7-Day Spending',
+                style: TextStyle(color: Colors.grey.shade400,
+                    fontSize: 12, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 10),
+            // Fake skeleton chart
+            SizedBox(
+              height: 80,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [0.3, 0.6, 0.4, 0.8, 0.5, 0.7, 0.45]
+                    .map((h) => Container(
+                          width: 28,
+                          height: 80 * h,
+                          decoration: BoxDecoration(
+                            color: primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Skeleton stat row
+            Row(
+              children: [
+                _trendStat('Daily Avg', '—', Icons.today_rounded,
+                    Colors.grey.shade300),
+                _trendDivider(),
+                _trendStat('This Week', '—', Icons.date_range_rounded,
+                    Colors.grey.shade300),
+                _trendDivider(),
+                _trendStat('Projected', '—', Icons.trending_up_rounded,
+                    Colors.grey.shade300),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: primary.withValues(alpha: 0.15)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.add_circle_outline_rounded,
+                      color: primary, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Add your first transaction to unlock spending trends, daily averages, and category insights.',
+                      style: TextStyle(
+                          color: primary, fontSize: 12, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     final now     = DateTime.now();
 
     // ── 7-day daily spending data ─────────────────────────
