@@ -626,9 +626,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return GestureDetector(
       onTap: () {
         // Navigate to savings tab (index 3 in home)
-        final home = context.findAncestorStateOfType<State>();
-        // Simple approach: just show a snack directing user
-      },
+          },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -1626,10 +1624,5 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 
 
-class _Trend {
-  final IconData icon;
-  final Color color;
-  final String text;
-  const _Trend({required this.icon, required this.color, required this.text});
-}
+
 

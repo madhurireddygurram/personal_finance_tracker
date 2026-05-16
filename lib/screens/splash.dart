@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/user_service.dart';
 import 'home.dart';
@@ -25,14 +26,17 @@ class _SplashScreenState extends State<SplashScreen>
     _scale = Tween<double>(begin: 0.7, end: 1).animate(
         CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
     _ctrl.forward();
-    Future.delayed(const Duration(milliseconds: 2200), () {
+
+    // In debug mode skip the splash delay so hot restarts land instantly
+    final delay = kDebugMode ? 0 : 2200;
+
+    Future.delayed(Duration(milliseconds: delay), () {
       if (!mounted) return;
-      // Route based on persisted state — never loses session between app restarts
       Widget next;
-      if (UserService.isLoggedIn && UserService.setupDone) {
-        next = const HomeScreen();        // returning user — go straight to app
+      if (UserService.email.isNotEmpty && UserService.setupDone) {
+        next = const HomeScreen();        // has account + setup done — go straight in
       } else if (UserService.email.isNotEmpty) {
-        next = const LoginScreen();       // account exists but not logged in
+        next = const LoginScreen();       // has account but setup not done
       } else if (UserService.onboardingDone) {
         next = const LoginScreen();       // saw onboarding, no account yet
       } else {
@@ -75,7 +79,7 @@ class _SplashScreenState extends State<SplashScreen>
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         )

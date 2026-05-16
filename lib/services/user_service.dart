@@ -99,7 +99,16 @@ class UserService {
 
   static Future<void> logout() async {
     await _box.put('loggedIn', false);
+    await _box.put('setupDone', false);
     await _box.flush();
+  }
+
+  // Called after login to re-mark setup as done (income was already saved)
+  static Future<void> restoreSetupDone() async {
+    if (income > 0) {
+      await _box.put('setupDone', true);
+      await _box.flush();
+    }
   }
 
   // ── Savings pot (separate from balance) ───────────────────

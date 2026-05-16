@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../l10n/app_localizations.dart';
 import '../providers/expense_provider.dart';
 import '../models/expense.dart';
 import '../services/user_service.dart';
@@ -364,7 +363,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     final currency = UserService.currency;
-    final l        = AppLocalizations.of(context);
     return Consumer<ExpenseProvider>(
       builder: (context, provider, _) {
         final filtered = provider.expenses.where((e) {

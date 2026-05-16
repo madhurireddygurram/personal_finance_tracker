@@ -80,13 +80,15 @@ class _LoginScreenState extends State<LoginScreen>
     }
 
     await UserService.setLoggedIn(true);
+    // Restore setupDone so app skips login on next restart
+    await UserService.restoreSetupDone();
 
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) =>
-            UserService.setupDone ? const HomeScreen() : const SetupScreen(),
+            UserService.income > 0 ? const HomeScreen() : const SetupScreen(),
       ),
     );
   }

@@ -209,6 +209,25 @@ class GoalsScreen extends StatelessWidget {
                   style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
             ],
           ),
+          if (!goal.isCompleted) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.savings_outlined, size: 12, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  () {
+                    final daysRemaining = goal.deadline.difference(DateTime.now()).inDays;
+                    final remaining = goal.targetAmount - goal.savedAmount;
+                    if (daysRemaining <= 0) return 'Deadline passed';
+                    final daily = remaining / daysRemaining;
+                    return 'Save $currency${daily.toStringAsFixed(2)}/day to reach goal';
+                  }(),
+                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 14),
 
           // ── 3 Action buttons ──────────────────────────────
