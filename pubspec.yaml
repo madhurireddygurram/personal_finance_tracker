@@ -37,8 +37,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
+<<<<<<< HEAD
   image_picker: ^1.1.2
   google_generative_ai: ^0.4.7
+=======
+  speech_to_text: ^7.3.0
+>>>>>>> 7bd1a23acff8aa29b6bc3aafe4f28f64fe016eb5
 
 dev_dependencies:
   flutter_test:

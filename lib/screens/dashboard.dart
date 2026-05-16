@@ -12,6 +12,7 @@ import 'ai_assistant.dart';
 import 'analytics.dart';
 import '../l10n/app_localizations.dart';
 import 'gamification.dart';
+import 'add_expense.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -1573,7 +1574,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _actionBtn(context, Icons.mic_rounded, 'Voice',
-                Theme.of(context).colorScheme.primary, () {}),
+                Theme.of(context).colorScheme.primary, () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AddExpenseScreen(initialTab: 1)));
+            }),
             _actionBtn(context, Icons.camera_alt_rounded, 'Scan',
                 const Color(0xFF7C4DFF), () {}),
             _actionBtn(context, Icons.chat_rounded, 'AI Chat',
