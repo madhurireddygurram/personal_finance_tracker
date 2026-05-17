@@ -23,7 +23,11 @@ Future<void> main() async {
   activeThemeNotifier.value = ThemeService.active;
   // Load persisted language
   final lang = UserService.language;
-  localeNotifier.value = Locale(lang == 'Hindi' ? 'hi' : lang == 'Telugu' ? 'te' : 'en');
+  final langMap = {
+    'Hindi': 'hi', 'Telugu': 'te', 'Tamil': 'ta', 'Kannada': 'kn', 
+    'Malayalam': 'ml', 'Bengali': 'bn', 'Marathi': 'mr'
+  };
+  localeNotifier.value = Locale(langMap[lang] ?? 'en');
   runApp(
     MultiProvider(
       providers: [
@@ -54,7 +58,11 @@ class FinanceApp extends StatelessWidget {
             theme: ThemeService.buildTheme(appTheme, Brightness.light),
             darkTheme: ThemeService.buildTheme(appTheme, Brightness.dark),
             locale: locale,
-            supportedLocales: const [Locale('en'), Locale('hi'), Locale('te')],
+            supportedLocales: const [
+              Locale('en'), Locale('hi'), Locale('te'),
+              Locale('ta'), Locale('kn'), Locale('ml'),
+              Locale('bn'), Locale('mr')
+            ],
             localizationsDelegates: const [
               AppLocalizationsDelegate(),
               GlobalMaterialLocalizations.delegate,

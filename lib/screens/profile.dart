@@ -54,29 +54,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (v) _showPinSetupDialog();
               else setState(() => _pinLock = false);
             }),
-            _divider(),
-            _arrowTile(Icons.fingerprint_rounded, l.fingerprint, '', () {
-              _snack('Biometric authentication enabled');
-            }),
           ]),
           const SizedBox(height: 16),
-          _section('Backup & Data', [
+          _section(l.backupData, [
             _switchTile(Icons.cloud_sync_outlined, l.cloudSync, _syncOn, (v) {
               setState(() => _syncOn = v);
-              _snack(v ? 'Cloud sync enabled' : 'Cloud sync disabled');
+              _snack(v ? AppLocalizations.of(context).cloudSyncEnabled : AppLocalizations.of(context).cloudSyncDisabled);
             }),
             _divider(),
             _arrowTile(Icons.download_outlined, l.exportPdf, '', _exportPdf),
           ]),
           const SizedBox(height: 16),
-          _section('More', [
-            _arrowTile(Icons.chat_outlined, 'AI Assistant', '', () {
+          _section(l.more, [
+            _arrowTile(Icons.chat_outlined, l.aiAssistant, '', () {
               Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const AiAssistantScreen()));
             }),
             _divider(),
             _arrowTile(Icons.emoji_events_outlined, l.achievements,
-                '${GamificationService.streak} day streak',
+                '${GamificationService.streak} ${l.dayStreak}',
                 () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const GamificationScreen()))),
             _divider(),
@@ -236,6 +232,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showEditProfile() {
+    final l = AppLocalizations.of(context);
     final nameCtrl = TextEditingController(text: UserService.name);
     final emailCtrl = TextEditingController(text: UserService.email);
 
@@ -254,22 +251,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Edit Profile',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(l.editProfile,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             TextField(
               controller: nameCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Full Name',
-                  prefixIcon: Icon(Icons.person_outline_rounded)),
+              decoration: InputDecoration(
+                  labelText: l.fullName,
+                  prefixIcon: const Icon(Icons.person_outline_rounded)),
             ),
             const SizedBox(height: 14),
             TextField(
               controller: emailCtrl,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                  labelText: 'Email Address',
-                  prefixIcon: Icon(Icons.email_outlined)),
+              decoration: InputDecoration(
+                  labelText: l.email,
+                  prefixIcon: const Icon(Icons.email_outlined)),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -277,16 +274,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 final name = nameCtrl.text.trim();
                 final email = emailCtrl.text.trim();
                 if (name.isEmpty || email.isEmpty) {
-                  _snack('Fields cannot be empty');
+                  _snack(l.fieldsEmpty);
                   return;
                 }
                 await UserService.updateProfile(name: name, email: email);
                 if (!context.mounted) return;
                 Navigator.pop(context);
                 setState(() {});
-                _snack('Profile updated successfully');
+                _snack(l.profileUpdated);
               },
-              child: const Text('Save Changes'),
+              child: Text(l.saveChanges),
             ),
           ],
         ),
@@ -295,36 +292,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showPinSetupDialog() {
+    final l = AppLocalizations.of(context);
     final ctrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Set PIN',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l.setPin,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         content: TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
           maxLength: 4,
           obscureText: true,
-          decoration: const InputDecoration(hintText: 'Enter 4-digit PIN'),
+          decoration: InputDecoration(hintText: l.enterPin),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(l.cancel)),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               if (ctrl.text.length == 4) {
                 setState(() => _pinLock = true);
-                _snack('PIN set successfully');
+                _snack(l.pinSet);
               } else {
-                _snack('PIN must be exactly 4 digits');
+                _snack(l.pinLength);
               }
             },
-            child: const Text('Save'),
+            child: Text(l.save),
           ),
         ],
       ),
@@ -332,42 +330,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _exportPdf() {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Export Report',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l.exportReport,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _exportOption(Icons.calendar_view_month_rounded, 'This Month'),
-            _exportOption(Icons.date_range_rounded, 'Last 3 Months'),
-            _exportOption(Icons.calendar_today_rounded, 'This Year'),
+            _exportOption(Icons.calendar_view_month_rounded, l.thisMonth, l),
+            _exportOption(Icons.date_range_rounded, l.last3Months, l),
+            _exportOption(Icons.calendar_today_rounded, l.thisYear, l),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(l.cancel)),
         ],
       ),
     );
   }
 
-  Widget _exportOption(IconData icon, String label) {
+  Widget _exportOption(IconData icon, String label, AppLocalizations l) {
     return ListTile(
       leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(label),
       onTap: () {
         Navigator.pop(context);
-        _snack('Generating $label PDF report...');
+        _snack('${l.generating} $label...');
       },
     );
   }
 
   void _showSplitExpenses() {
+    final l = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -383,32 +383,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Split Expenses',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(l.splitExpenses,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            const TextField(
+            TextField(
                 decoration: InputDecoration(
-                    labelText: 'Expense Name',
-                    prefixIcon: Icon(Icons.receipt_outlined))),
+                    labelText: l.expenseName,
+                    prefixIcon: const Icon(Icons.receipt_outlined))),
             const SizedBox(height: 14),
-            const TextField(
+            TextField(
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                    labelText: 'Total Amount',
-                    prefixIcon: Icon(Icons.currency_rupee))),
+                    labelText: l.amount,
+                    prefixIcon: const Icon(Icons.currency_rupee))),
             const SizedBox(height: 14),
-            const TextField(
+            TextField(
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                    labelText: 'Number of People',
-                    prefixIcon: Icon(Icons.group_outlined))),
+                    labelText: l.numPeople,
+                    prefixIcon: const Icon(Icons.group_outlined))),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                _snack('Split expense created');
+                _snack(l.splitCreated);
               },
-              child: const Text('Split & Share'),
+              child: Text(l.splitShare),
             ),
           ],
         ),
@@ -420,55 +420,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String selected = _language; // local copy for sheet state
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setSheet) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(l.selectLanguage,
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        maxChildSize: 0.9,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (_, scrollCtrl) => StatefulBuilder(
+          builder: (ctx, setSheet) => Column(
+            children: [
+              const SizedBox(height: 16),
+              Container(width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 16),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(l.selectLanguage,
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            ..._languages.map((lang) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-              leading: Icon(
-                Icons.language_outlined,
-                color: selected == lang ? Theme.of(context).colorScheme.primary : Colors.grey,
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView(
+                  controller: scrollCtrl,
+                  children: _languages.map((lang) => ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                    leading: Icon(
+                      Icons.language_outlined,
+                      color: selected == lang ? Theme.of(context).colorScheme.primary : Colors.grey,
+                    ),
+                    title: Text(lang),
+                    trailing: selected == lang
+                        ? const Icon(Icons.check_circle_rounded, color: Color(0xFF00C853))
+                        : null,
+                    onTap: () async {
+                      setSheet(() => selected = lang);  // update checkmark in sheet
+                      await UserService.setLanguage(lang); // persist to Hive
+                      // Update locale so entire app rebuilds in new language
+                      String code = 'en';
+                      switch(lang) {
+                        case 'Hindi': code = 'hi'; break;
+                        case 'Telugu': code = 'te'; break;
+                        case 'Tamil': code = 'ta'; break;
+                        case 'Kannada': code = 'kn'; break;
+                        case 'Malayalam': code = 'ml'; break;
+                        case 'Bengali': code = 'bn'; break;
+                        case 'Marathi': code = 'mr'; break;
+                      }
+                      localeNotifier.value = Locale(code);
+                      setState(() {}); // update subtitle on profile tile
+                      Navigator.pop(ctx);
+                      _snack('${l.langChanged} $lang');
+                    },
+                  )).toList(),
+                ),
               ),
-              title: Text(lang),
-              trailing: selected == lang
-                  ? const Icon(Icons.check_circle_rounded, color: Color(0xFF00C853))
-                  : null,
-              onTap: () async {
-                setSheet(() => selected = lang);  // update checkmark in sheet
-                await UserService.setLanguage(lang); // persist to Hive
-                // Update locale so entire app rebuilds in new language
-                localeNotifier.value = Locale(
-                  lang == 'Hindi' ? 'hi' : lang == 'Telugu' ? 'te' : 'en');
-                setState(() {}); // update subtitle on profile tile
-                Navigator.pop(ctx);
-                _snack('Language changed to $lang');
-              },
-            )),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
   }
 
   void _showCurrencyPicker() {
+    final l = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -489,8 +510,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
               child: Align(alignment: Alignment.centerLeft,
-                  child: Text('Select Currency',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold))),
+                  child: Text(l.selectCurrency,
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold))),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -538,7 +559,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       if (!context.mounted) return;
                       setState(() {});
                       Navigator.pop(context);
-                      _snack('Currency changed to ${entry.value}');
+                      _snack('${l.currChanged} ${entry.value}');
                     },
                   );
                 }).toList(),
@@ -551,18 +572,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _confirmLogout() {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Logout',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(l.logout,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(l.logoutConfirm),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(l.cancel)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
@@ -577,7 +599,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 (_) => false,
               );
             },
-            child: const Text('Logout'),
+            child: Text(l.logout),
           ),
         ],
       ),

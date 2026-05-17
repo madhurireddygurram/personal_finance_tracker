@@ -58,44 +58,80 @@ class _GamificationScreenState extends State<GamificationScreen> {
         final challenges    = GamificationService.challenges(expenses);
         final unlockedCount = badges.where((b) => b.unlocked).length;
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFF5F7FA),
-          appBar: AppBar(
-            title: const Text('Achievements',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            centerTitle: true,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-          ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _scoreCard(score, scoreLabel, unlockedCount, badges.length),
-              const SizedBox(height: 16),
-              _streakCard(streak, bestStreak),
-              const SizedBox(height: 20),
-              _sectionHeader('Active Challenges',
-                  '${challenges.where((c) => c.completed).length}/${challenges.length} done'),
-              const SizedBox(height: 12),
-              ...challenges.map((c) => _challengeCard(c)),
-              const SizedBox(height: 20),
-              _sectionHeader('Badges', '$unlockedCount/${badges.length} unlocked'),
-              const SizedBox(height: 12),
-              _badgesGrid(badges),
-              const SizedBox(height: 20),
-              _sectionHeader('Themes',
-                  '${ThemeService.themes.where((t) => ThemeService.isUnlocked(t, unlockedCount)).length}/${ThemeService.themes.length} unlocked'),
-              const SizedBox(height: 4),
-              Text('Earn badges to unlock new app themes',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-              const SizedBox(height: 12),
-              _themesSection(unlockedCount),
-              const SizedBox(height: 20),
-              _sectionHeader('Rewards', 'Unlock by earning badges'),
-              const SizedBox(height: 12),
-              _rewardsSection(unlockedCount, badges.length),
-              const SizedBox(height: 16),
-            ],
+        return DefaultTabController(
+          length: 4,
+          child: Scaffold(
+            backgroundColor: const Color(0xFFF5F7FA),
+            appBar: AppBar(
+              title: const Text('Achievements',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              centerTitle: true,
+              backgroundColor: Colors.white,
+              elevation: 0,
+              bottom: TabBar(
+                isScrollable: true,
+                labelColor: Theme.of(context).colorScheme.primary,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: Theme.of(context).colorScheme.primary,
+                indicatorWeight: 3,
+                tabAlignment: TabAlignment.start,
+                tabs: const [
+                  Tab(text: 'Overview'),
+                  Tab(text: 'Challenges'),
+                  Tab(text: 'Badges'),
+                  Tab(text: 'Rewards'),
+                ],
+              ),
+            ),
+            body: TabBarView(
+              children: [
+                // Tab 1: Overview
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _scoreCard(score, scoreLabel, unlockedCount, badges.length),
+                    const SizedBox(height: 16),
+                    _streakCard(streak, bestStreak),
+                  ],
+                ),
+                // Tab 2: Challenges
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _sectionHeader('Active Challenges',
+                        '${challenges.where((c) => c.completed).length}/${challenges.length} done'),
+                    const SizedBox(height: 12),
+                    ...challenges.map((c) => _challengeCard(c)),
+                  ],
+                ),
+                // Tab 3: Badges
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _sectionHeader('Badges', '$unlockedCount/${badges.length} unlocked'),
+                    const SizedBox(height: 12),
+                    _badgesGrid(badges),
+                  ],
+                ),
+                // Tab 4: Rewards
+                ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _sectionHeader('Themes',
+                        '${ThemeService.themes.where((t) => ThemeService.isUnlocked(t, unlockedCount)).length}/${ThemeService.themes.length} unlocked'),
+                    const SizedBox(height: 4),
+                    Text('Earn badges to unlock new app themes',
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                    const SizedBox(height: 12),
+                    _themesSection(unlockedCount),
+                    const SizedBox(height: 20),
+                    _sectionHeader('Milestone Rewards', 'Unlock by earning badges'),
+                    const SizedBox(height: 12),
+                    _rewardsSection(unlockedCount, badges.length),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
