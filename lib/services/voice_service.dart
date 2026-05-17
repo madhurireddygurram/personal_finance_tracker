@@ -54,39 +54,25 @@ class VoiceService {
   }
 
   // ── Smart parser ──────────────────────────────────────────
-  // Parses spoken text like:
-  // "I spent 200 on food"
-  // "Swiggy 350 rupees"
-  // "Netflix subscription 649"
-  // "Paid 500 for transport"
   static VoiceResult parse(String text) {
     final lower = text.toLowerCase().trim();
 
-    // Extract amount — look for numbers (with optional decimals)
     double? amount;
-    final amountRegex = RegExp(r'(\d+(?:\.\d{1,2})?)');
-    final amountMatch = amountRegex.firstMatch(lower);
+    final amountMatch = RegExp(r'(\d+(?:\.\d{1,2})?)').firstMatch(lower);
     if (amountMatch != null) {
       amount = double.tryParse(amountMatch.group(1)!);
     }
 
-    // Detect category from keywords
-    final category = _detectCategory(lower);
-
-    // Build note — use the original text cleaned up
-    final note = _buildNote(text, amount);
-
     return VoiceResult(
       amount  : amount,
-      category: category,
-      note    : note,
+      category: _detectCategory(lower),
+      note    : _buildNote(text, amount),
       rawText : text,
     );
   }
 
   static String _detectCategory(String text) {
     const keywords = <String, String>{
-      // Food
       'swiggy':'Food','zomato':'Food','dominos':'Food','pizza':'Food',
       'burger':'Food','mcdonalds':'Food','kfc':'Food','subway':'Food',
       'restaurant':'Food','cafe':'Food','coffee':'Food','tea':'Food',
@@ -94,42 +80,35 @@ class VoiceService {
       'grocery':'Food','groceries':'Food','vegetables':'Food','fruits':'Food',
       'milk':'Food','hotel':'Food','biryani':'Food','food':'Food',
       'eat':'Food','eating':'Food','meal':'Food',
-      // Transport
       'uber':'Transport','ola':'Transport','rapido':'Transport',
       'bus':'Transport','metro':'Transport','train':'Transport',
       'auto':'Transport','taxi':'Transport','petrol':'Transport',
       'fuel':'Transport','diesel':'Transport','parking':'Transport',
       'flight':'Transport','cab':'Transport','transport':'Transport',
       'travel':'Transport','commute':'Transport','ride':'Transport',
-      // Shopping
       'amazon':'Shopping','flipkart':'Shopping','myntra':'Shopping',
       'ajio':'Shopping','clothes':'Shopping','shirt':'Shopping',
       'shoes':'Shopping','dress':'Shopping','shopping':'Shopping',
       'mall':'Shopping','market':'Shopping','purchase':'Shopping',
       'bought':'Shopping','buy':'Shopping',
-      // Bills
       'electricity':'Bills','water':'Bills','internet':'Bills',
       'wifi':'Bills','mobile':'Bills','recharge':'Bills',
       'netflix':'Bills','spotify':'Bills','hotstar':'Bills',
       'subscription':'Bills','rent':'Bills','emi':'Bills',
       'insurance':'Bills','bill':'Bills','utility':'Bills',
       'phone':'Bills','broadband':'Bills',
-      // Health
       'medicine':'Health','doctor':'Health','hospital':'Health',
       'pharmacy':'Health','clinic':'Health','gym':'Health',
       'health':'Health','medical':'Health','tablet':'Health',
       'chemist':'Health','fitness':'Health',
-      // Education
       'book':'Education','course':'Education','tuition':'Education',
       'college':'Education','school':'Education','fees':'Education',
       'exam':'Education','stationery':'Education','pen':'Education',
       'notebook':'Education','education':'Education','class':'Education',
-      // Entertainment
       'movie':'Entertainment','cinema':'Entertainment','game':'Entertainment',
       'concert':'Entertainment','party':'Entertainment','outing':'Entertainment',
       'fun':'Entertainment','entertainment':'Entertainment',
     };
-
     for (final entry in keywords.entries) {
       if (text.contains(entry.key)) return entry.value;
     }
@@ -137,24 +116,19 @@ class VoiceService {
   }
 
   static String _buildNote(String text, double? amount) {
-    // Remove number and common filler words to get a clean note
     String note = text;
     if (amount != null) {
       note = note.replaceAll(RegExp(r'\d+(?:\.\d{1,2})?'), '').trim();
     }
-    // Remove filler words
     const fillers = [
-      'i spent', 'i paid', 'paid', 'spent', 'rupees', 'rs', 'inr',
-      'dollars', 'for', 'on', 'at', 'the', 'a', 'an', 'to',
+      'i spent','i paid','paid','spent','rupees','rs','inr',
+      'dollars','for','on','at','the','a','an','to',
     ];
     for (final f in fillers) {
       note = note.replaceAll(RegExp('\\b$f\\b', caseSensitive: false), '');
     }
     note = note.replaceAll(RegExp(r'\s+'), ' ').trim();
-    // Capitalize first letter
-    if (note.isNotEmpty) {
-      note = note[0].toUpperCase() + note.substring(1);
-    }
+    if (note.isNotEmpty) note = note[0].toUpperCase() + note.substring(1);
     return note.isEmpty ? text : note;
   }
 }

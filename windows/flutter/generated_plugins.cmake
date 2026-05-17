@@ -3,11 +3,8 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-<<<<<<< HEAD
   file_selector_windows
-=======
   speech_to_text_windows
->>>>>>> 7bd1a23acff8aa29b6bc3aafe4f28f64fe016eb5
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
