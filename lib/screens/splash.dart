@@ -20,11 +20,18 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-    _fade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
-    _scale = Tween<double>(begin: 0.7, end: 1).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _fade = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+    _scale = Tween<double>(
+      begin: 0.7,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
     _ctrl.forward();
 
     // In debug mode skip the splash delay so hot restarts land instantly
@@ -33,16 +40,19 @@ class _SplashScreenState extends State<SplashScreen>
     Future.delayed(Duration(milliseconds: delay), () {
       if (!mounted) return;
       Widget next;
-      if (UserService.email.isNotEmpty && UserService.setupDone) {
-        next = const HomeScreen();        // has account + setup done — go straight in
-      } else if (UserService.email.isNotEmpty) {
-        next = const LoginScreen();       // has account but setup not done
+      if (UserService.isLoggedIn && UserService.setupDone) {
+        next = const HomeScreen(); // active session + setup done
+      } else if (UserService.hasAccount) {
+        next = const LoginScreen(); // saved account exists, ask for sign in
       } else if (UserService.onboardingDone) {
-        next = const LoginScreen();       // saw onboarding, no account yet
+        next = const LoginScreen(); // saw onboarding, no account yet
       } else {
-        next = const OnboardingScreen();  // very first launch
+        next = const OnboardingScreen(); // very first launch
       }
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => next));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => next),
+      );
     });
   }
 
@@ -82,25 +92,34 @@ class _SplashScreenState extends State<SplashScreen>
                           color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
-                        )
+                        ),
                       ],
                     ),
-                    child: const Icon(Icons.account_balance_wallet,
-                        size: 50, color: Color(0xFF1565C0)),
+                    child: const Icon(
+                      Icons.account_balance_wallet,
+                      size: 50,
+                      color: Color(0xFF1565C0),
+                    ),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Finance AI',
-                      style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 1)),
+                  const Text(
+                    'Finance AI',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  const Text('Take Control of Your Money',
-                      style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.white70,
-                          letterSpacing: 0.5)),
+                  const Text(
+                    'Take Control of Your Money',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.white70,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -110,4 +129,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-

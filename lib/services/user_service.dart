@@ -23,6 +23,8 @@ class UserService {
     await _box.put('name', name.trim());
     await _box.put('email', email.trim().toLowerCase());
     await _box.put('password', password);
+    await _box.put('accountCreated', true);
+    await _box.put('onboardingDone', true);
     await _box.flush();
   }
 
@@ -37,7 +39,11 @@ class UserService {
 
   static String get name => _box.get('name', defaultValue: '') as String;
   static String get email => _box.get('email', defaultValue: '') as String;
-  static String get password => _box.get('password', defaultValue: '') as String;
+  static String get password =>
+      _box.get('password', defaultValue: '') as String;
+  static bool get hasAccount =>
+      _box.get('accountCreated', defaultValue: false) as bool ||
+      (email.isNotEmpty && password.isNotEmpty);
   static String get initial => name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
   // ── Setup ─────────────────────────────────────────────────
@@ -99,7 +105,6 @@ class UserService {
 
   static Future<void> logout() async {
     await _box.put('loggedIn', false);
-    await _box.put('setupDone', false);
     await _box.flush();
   }
 
