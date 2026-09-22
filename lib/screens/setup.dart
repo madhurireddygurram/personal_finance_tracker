@@ -60,30 +60,28 @@ class _SetupScreenState extends State<SetupScreen> {
     super.dispose();
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFFF5252),
-        ),
-      );
+  Future<void> _skipForNow() async {
+    await UserService.saveSetup(
+      income: 25000.0,
+      budget: 15000.0,
+      currency: '₹',
+      goal: '',
+      isStudent: false,
+    );
+    if (!mounted) return;
+    Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+  }
 
   Future<void> _finish() async {
-    final income = double.tryParse(_incomeCtrl.text.trim());
-    final budget = double.tryParse(_budgetCtrl.text.trim());
-    final label  = _isStudent ? 'pocket money' : 'income';
+    final enteredIncome = double.tryParse(_incomeCtrl.text.trim());
+    final enteredBudget = double.tryParse(_budgetCtrl.text.trim());
+    final income = (enteredIncome != null && enteredIncome > 0) ? enteredIncome : 25000.0;
+    final budget = (enteredBudget != null && enteredBudget > 0)
+        ? (enteredBudget <= income ? enteredBudget : income)
+        : (income * 0.6);
 
-    if (income == null || income <= 0) {
-      _snack('Please enter a valid monthly $label'); return;
-    }
-    if (budget == null || budget <= 0) {
-      _snack('Please enter a valid monthly budget'); return;
-    }
-    if (budget > income) {
-      _snack('Budget cannot exceed your $label'); return;
-    }
-
-    final symbol = _currencies[_selectedCurrency]!;
+    final symbol = _currencies[_selectedCurrency] ?? '₹';
     final goalName   = _goalNameCtrl.text.trim();
     final goalAmount = double.tryParse(_goalAmountCtrl.text.trim()) ?? 0;
 
@@ -112,7 +110,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final name = UserService.name.split(' ').first;
+    final name = UserService.name.isNotEmpty ? UserService.name.split(' ').first : 'User';
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -145,17 +143,23 @@ class _SetupScreenState extends State<SetupScreen> {
                               color: Colors.white, size: 24),
                         ),
                         const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Welcome, $name!',
-                                style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold)),
-                            const Text('Let\'s set up your profile',
-                                style: TextStyle(
-                                    color: Colors.grey, fontSize: 13)),
-                          ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Welcome, $name!',
+                                  style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold)),
+                              const Text('Let\'s set up your profile',
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _skipForNow,
+                          child: const Text('Skip', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),

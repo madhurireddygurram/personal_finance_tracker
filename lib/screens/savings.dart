@@ -465,9 +465,11 @@ class SavingsScreen extends StatelessWidget {
                 // Update savings pot via provider (persists + notifies)
                 await sp.deposit(amount);
                 if (ctx.mounted) Navigator.pop(ctx);
-                _snack(context,
-                    '$currency${amount.toStringAsFixed(0)} deposited to savings',
-                    error: false);
+                if (context.mounted) {
+                  _snack(context,
+                      '$currency${amount.toStringAsFixed(0)} deposited to savings',
+                      error: false);
+                }
               },
               child: const Text('Deposit to Savings'),
             ),
@@ -570,9 +572,11 @@ class SavingsScreen extends StatelessWidget {
                 // Update savings pot via provider
                 await sp.withdraw(amount);
                 if (ctx.mounted) Navigator.pop(ctx);
-                _snack(context,
-                    '$currency${amount.toStringAsFixed(0)} withdrawn from savings',
-                    error: false);
+                if (context.mounted) {
+                  _snack(context,
+                      '$currency${amount.toStringAsFixed(0)} withdrawn from savings',
+                      error: false);
+                }
               },
               child: const Text('Withdraw'),
             ),

@@ -487,7 +487,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
                             onTap: () async {
                               await ThemeService.setTheme(theme.id);
                               activeThemeNotifier.value = theme;
-                              if (context.mounted) {
+                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                   content: Text('${theme.name} theme applied!'),
                                   behavior: SnackBarBehavior.floating,

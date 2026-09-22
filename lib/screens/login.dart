@@ -31,6 +31,9 @@ class _LoginScreenState extends State<LoginScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 2, vsync: this);
+    if (UserService.email.isNotEmpty) {
+      _loginEmailCtrl.text = UserService.email;
+    }
   }
 
   @override
@@ -67,30 +70,19 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
 
-    final savedEmail = UserService.email;
-    final savedPass = UserService.password;
-
-    if (savedEmail.isEmpty) {
-      _snack('No account found. Please sign up first');
-      return;
+    final res = await UserService.authenticate(email, pass);
+    if (res == AuthResult.success) {
+      if (!mounted) return;
+      _snack('Welcome back, ${UserService.name}!', error: false);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } else if (res == AuthResult.wrongPassword) {
+      _snack('Incorrect password for $email');
+    } else {
+      _snack('No account found for $email. Please switch to Sign Up');
     }
-    if (email != savedEmail || pass != savedPass) {
-      _snack('Incorrect email or password');
-      return;
-    }
-
-    await UserService.setLoggedIn(true);
-    // Restore setupDone so app skips login on next restart
-    await UserService.restoreSetupDone();
-
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            UserService.income > 0 ? const HomeScreen() : const SetupScreen(),
-      ),
-    );
   }
 
   // ── Signup ────────────────────────────────────────────────
@@ -121,8 +113,14 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
 
+    if (UserService.accountExists(email)) {
+      _snack('An account with $email already exists. Please log in');
+      _loginEmailCtrl.text = email;
+      _tab.animateTo(0);
+      return;
+    }
+
     await UserService.saveUser(name: name, email: email, password: pass);
-    await UserService.setLoggedIn(true);
 
     if (!mounted) return;
     _snack('Account created! Welcome, $name', error: false);
@@ -135,6 +133,9 @@ class _LoginScreenState extends State<LoginScreen>
   // ── Forgot Password ───────────────────────────────────────
   void _forgotPassword() {
     final emailCtrl = TextEditingController();
+    if (_loginEmailCtrl.text.isNotEmpty) {
+      emailCtrl.text = _loginEmailCtrl.text.trim();
+    }
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -167,13 +168,14 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           ElevatedButton(
             onPressed: () {
-              final entered = emailCtrl.text.trim();
+              final entered = emailCtrl.text.trim().toLowerCase();
               Navigator.pop(ctx);
               if (entered.isEmpty) {
                 _snack('Please enter your email');
                 return;
               }
-              if (entered != UserService.email) {
+              final recoveredPass = UserService.findPassword(entered);
+              if (recoveredPass == null) {
                 _snack('No account found with this email');
                 return;
               }
@@ -197,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen>
                             color: Color(0xFF00C853)),
                         const SizedBox(width: 10),
                         Text(
-                          UserService.password,
+                          recoveredPass,
                           style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold),
                         ),
@@ -277,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen>
               // Show the correct form based on tab index
               AnimatedBuilder(
                 animation: _tab,
-                builder: (_, __) => _tab.index == 0
+                builder: (_, child) => _tab.index == 0
                     ? _loginForm()
                     : _signupForm(),
               ),

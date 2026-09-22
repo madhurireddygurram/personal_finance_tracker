@@ -33,14 +33,14 @@ class _SplashScreenState extends State<SplashScreen>
     Future.delayed(Duration(milliseconds: delay), () {
       if (!mounted) return;
       Widget next;
-      if (UserService.email.isNotEmpty && UserService.setupDone) {
-        next = const HomeScreen();        // has account + setup done — go straight in
-      } else if (UserService.email.isNotEmpty) {
-        next = const LoginScreen();       // has account but setup not done
+      if (UserService.isLoggedIn) {
+        next = const HomeScreen();        // Active session — go straight in!
+      } else if (UserService.hasAnyAccount || UserService.email.isNotEmpty) {
+        next = const LoginScreen();       // Has registered account — prompt to login
       } else if (UserService.onboardingDone) {
-        next = const LoginScreen();       // saw onboarding, no account yet
+        next = const LoginScreen();       // Completed onboarding
       } else {
-        next = const OnboardingScreen();  // very first launch
+        next = const OnboardingScreen();  // Very first launch
       }
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => next));
     });

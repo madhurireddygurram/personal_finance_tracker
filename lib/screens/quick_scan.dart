@@ -276,7 +276,7 @@ class _QuickScanScreenState extends State<QuickScanScreen>
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: 'Total Amount *',
-                    prefixIcon: const Icon(Icons.currency_rupee_rounded),
+                    prefixIcon: const Icon(Icons.attach_money_rounded),
                     prefixText: '$currency ',
                   ),
                 ),
@@ -514,7 +514,7 @@ class _QuickScanScreenState extends State<QuickScanScreen>
             if (_scanning)
               AnimatedBuilder(
                 animation: _scanAnim,
-                builder: (_, __) => Positioned(
+                builder: (_, child) => Positioned(
                   top: 32 + (_scanAnim.value * 196),
                   left: 32, right: 32,
                   child: Container(

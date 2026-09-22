@@ -13,6 +13,10 @@ import 'analytics.dart';
 import '../l10n/app_localizations.dart';
 import 'gamification.dart';
 import 'add_expense.dart';
+import 'goals.dart';
+import 'transactions.dart';
+import 'savings.dart';
+import 'quick_scan.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -65,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _topBar(),
+              _topBar(provider, goalProvider, savingsProvider),
               const SizedBox(height: 12),
               _gamificationBar(provider),
               const SizedBox(height: 16),
@@ -87,11 +91,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 20),
               _smartTrends(provider, currency),
               const SizedBox(height: 20),
-              _sectionTitle('Goals', onTap: () {}),
+              _sectionTitle('Goals', onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GoalsScreen()))),
               const SizedBox(height: 12),
               _goalsPreview(goalProvider, currency),
               const SizedBox(height: 20),
-              _sectionTitle('Recent Transactions', onTap: () {}),
+              _sectionTitle('Recent Transactions', onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TransactionsScreen()))),
               const SizedBox(height: 12),
               _recentTransactions(provider, currency),
               const SizedBox(height: 20),
@@ -105,7 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ── Top bar ───────────────────────────────────────────────
-  Widget _topBar() {
+  Widget _topBar(ExpenseProvider p, GoalProvider gp, SavingsProvider sp) {
     final name = UserService.name;
     final firstName = name.contains(' ') ? name.split(' ').first : name;
     final l   = AppLocalizations.of(context);
@@ -124,8 +132,151 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text(dateStr, style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
           ],
         ),
-        IconButton(icon: const Icon(Icons.notifications_outlined, size: 26), onPressed: () {}),
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined, size: 26),
+          onPressed: () => _showNotifications(context, p, gp, sp),
+        ),
       ],
+    );
+  }
+
+  void _showNotifications(BuildContext context, ExpenseProvider p, GoalProvider gp, SavingsProvider sp) {
+    final currency = UserService.currency;
+    final budget = UserService.budget;
+    final spent = p.totalExpenses;
+    final streak = GamificationService.streak;
+
+    final alerts = <Map<String, dynamic>>[];
+
+    // Budget alert
+    if (budget > 0) {
+      if (spent > budget) {
+        alerts.add({
+          'icon': Icons.warning_rounded,
+          'color': const Color(0xFFFF5252),
+          'title': 'Budget Exceeded!',
+          'desc': 'You have spent $currency${spent.toStringAsFixed(0)} against your budget of $currency${budget.toStringAsFixed(0)}.',
+        });
+      } else if (spent >= budget * 0.8) {
+        alerts.add({
+          'icon': Icons.warning_amber_rounded,
+          'color': const Color(0xFFFF6D00),
+          'title': 'Budget Alert',
+          'desc': 'You have reached ${((spent / budget) * 100).toStringAsFixed(0)}% of your monthly budget.',
+        });
+      } else {
+        alerts.add({
+          'icon': Icons.check_circle_outline_rounded,
+          'color': const Color(0xFF00C853),
+          'title': 'Budget On Track',
+          'desc': '$currency${(budget - spent).toStringAsFixed(0)} remaining for this month.',
+        });
+      }
+    }
+
+    // Streak notification
+    alerts.add({
+      'icon': Icons.local_fire_department_rounded,
+      'color': const Color(0xFFFF6D00),
+      'title': '$streak Day Streak!',
+      'desc': streak > 0 ? 'Keep logging daily to increase your streak and earn rewards.' : 'Log an expense today to start a new streak!',
+    });
+
+    // Goals notification
+    if (gp.goals.isNotEmpty) {
+      final active = gp.goals.where((g) => !g.isCompleted).toList();
+      if (active.isNotEmpty) {
+        final g = active.first;
+        final daysLeft = g.deadline.difference(DateTime.now()).inDays;
+        alerts.add({
+          'icon': Icons.flag_rounded,
+          'color': const Color(0xFF7C4DFF),
+          'title': 'Goal: ${g.name}',
+          'desc': '${(g.progress * 100).toInt()}% achieved with $daysLeft days remaining.',
+        });
+      }
+    }
+
+    // Savings pot notification
+    if (sp.savings > 0) {
+      alerts.add({
+        'icon': Icons.savings_rounded,
+        'color': const Color(0xFF00897B),
+        'title': 'Savings Pot',
+        'desc': 'You have $currency${sp.savings.toStringAsFixed(0)} safely tucked away.',
+      });
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFF5F7FA),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Notifications & Alerts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...alerts.map((a) => Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: (a['color'] as Color).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(a['icon'] as IconData, color: a['color'] as Color, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(a['title'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(height: 2),
+                        Text(a['desc'] as String, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ),
+      ),
     );
   }
 
@@ -625,9 +776,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final savingsPct = income > 0 ? (savings / income * 100).clamp(0, 100) : 0.0;
 
     return GestureDetector(
-      onTap: () {
-        // Navigate to savings tab (index 3 in home)
-          },
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SavingsScreen()),
+      ),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -708,10 +860,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final at50  = pct >= 50 && pct < 80;
 
     Color barColor;
-    if (overBudget)   barColor = const Color(0xFFFF5252);
-    else if (at90)    barColor = const Color(0xFFFF5252);
-    else if (at80)    barColor = const Color(0xFFFF6D00);
-    else              barColor = Theme.of(context).colorScheme.primary;
+    if (overBudget) {
+      barColor = const Color(0xFFFF5252);
+    } else if (at90) {
+      barColor = const Color(0xFFFF5252);
+    } else if (at80) {
+      barColor = const Color(0xFFFF6D00);
+    } else {
+      barColor = Theme.of(context).colorScheme.primary;
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1276,8 +1433,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       reservedSize: 22,
                       getTitlesWidget: (v, _) {
                         final i = v.toInt();
-                        if (i < 0 || i >= labels.length)
+                        if (i < 0 || i >= labels.length) {
                           return const SizedBox.shrink();
+                        }
                         return Text(labels[i],
                             style: TextStyle(
                                 color: Colors.grey.shade400, fontSize: 9));
@@ -1294,7 +1452,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     barWidth: 2.5,
                     dotData: FlDotData(
                       show: true,
-                      getDotPainter: (spot, _, __, ___) =>
+                      getDotPainter: (spot, p1, p2, p3) =>
                           FlDotCirclePainter(
                               radius: 3,
                               color: primary,
@@ -1579,7 +1737,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   MaterialPageRoute(builder: (_) => const AddExpenseScreen(initialTab: 1)));
             }),
             _actionBtn(context, Icons.camera_alt_rounded, 'Scan',
-                const Color(0xFF7C4DFF), () {}),
+                const Color(0xFF7C4DFF), () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const QuickScanScreen()));
+            }),
             _actionBtn(context, Icons.chat_rounded, 'AI Chat',
                 const Color(0xFFFF6D00), () {
               Navigator.push(

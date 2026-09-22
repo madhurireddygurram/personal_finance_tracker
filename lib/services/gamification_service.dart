@@ -237,7 +237,7 @@ class GamificationService {
         id: 'no_food_delivery_week',
         title: 'Cook at Home',
         desc: 'Spend less than ${UserService.currency}200 on food this week',
-        icon: Icons_challenge.restaurant,
+        icon: IconsChallenge.restaurant,
         color: 0xFF00C853,
         target: 200,
         // Only show real progress if user has logged food this week
@@ -250,7 +250,7 @@ class GamificationService {
         id: 'no_entertainment',
         title: 'Entertainment Fast',
         desc: 'Keep entertainment under ${UserService.currency}500 this month',
-        icon: Icons_challenge.movie,
+        icon: IconsChallenge.movie,
         color: 0xFFFF4081,
         target: 500,
         current: hasEntData ? entertainmentThisMonth : 500,
@@ -261,7 +261,7 @@ class GamificationService {
         id: 'budget_80',
         title: 'Budget Champion',
         desc: 'Use only 80% of your monthly budget',
-        icon: Icons_challenge.shield,
+        icon: IconsChallenge.shield,
         color: 0xFF3D5AFE,
         target: budget * 0.8,
         // No data = not started, show 0 progress
@@ -273,7 +273,7 @@ class GamificationService {
         id: 'streak_7',
         title: '7-Day Streak',
         desc: 'Track expenses every day for 7 days',
-        icon: Icons_challenge.fire,
+        icon: IconsChallenge.fire,
         color: 0xFFFF6D00,
         target: 7,
         current: streak.toDouble(),
@@ -284,7 +284,7 @@ class GamificationService {
         id: 'save_10pct',
         title: 'Save 10%',
         desc: 'Save 10% of your income this month',
-        icon: Icons_challenge.savings,
+        icon: IconsChallenge.savings,
         color: 0xFF00897B,
         target: UserService.income * 0.1,
         current: UserService.savings,
@@ -347,7 +347,7 @@ class Challenge {
 }
 
 // Icon string constants for challenges
-class Icons_challenge {
+class IconsChallenge {
   static const restaurant = 'restaurant';
   static const movie      = 'movie';
   static const shield     = 'shield';

@@ -47,11 +47,11 @@ class FinanceApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<AppTheme>(
       valueListenable: activeThemeNotifier,
-      builder: (_, appTheme, __) => ValueListenableBuilder<ThemeMode>(
+      builder: (_, appTheme, child) => ValueListenableBuilder<ThemeMode>(
         valueListenable: themeModeNotifier,
-        builder: (_, mode, __) => ValueListenableBuilder<Locale>(
+        builder: (_, mode, child2) => ValueListenableBuilder<Locale>(
           valueListenable: localeNotifier,
-          builder: (_, locale, __) => MaterialApp(
+          builder: (_, locale, child3) => MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Finance AI',
             themeMode: mode,

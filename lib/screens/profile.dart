@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import '../models/expense.dart';
+import '../providers/expense_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart';
 import '../services/user_service.dart';
@@ -15,12 +19,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _syncOn = true;
-  bool _pinLock = false;
-
-  // Read language from Hive so it persists across sessions
-  String get _language => UserService.language;
-
   bool get _darkMode => themeModeNotifier.value == ThemeMode.dark;
 
   @override
@@ -41,31 +39,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               setState(() {});
             }),
             _divider(),
-            _arrowTile(Icons.language_outlined, l.language, _language,
-                () => _showLanguagePicker(l)),
-            _divider(),
             _arrowTile(Icons.currency_exchange_outlined, l.currency,
                 _currentCurrencyLabel.split('–').first.trim(),
                 () => _showCurrencyPicker()),
-          ]),
-          const SizedBox(height: 16),
-          _section(l.security, [
-            _switchTile(Icons.pin_outlined, l.pinLock, _pinLock, (v) {
-              if (v) _showPinSetupDialog();
-              else setState(() => _pinLock = false);
-            }),
-          ]),
-          const SizedBox(height: 16),
-          _section(l.backupData, [
-            _switchTile(Icons.cloud_sync_outlined, l.cloudSync, _syncOn, (v) {
-              setState(() => _syncOn = v);
-              _snack(v ? AppLocalizations.of(context).cloudSyncEnabled : AppLocalizations.of(context).cloudSyncDisabled);
-            }),
             _divider(),
-            _arrowTile(Icons.download_outlined, l.exportPdf, '', _exportPdf),
+            _arrowTile(Icons.account_balance_wallet_outlined, 'Budget & Income',
+                '${UserService.currency}${UserService.budget.toStringAsFixed(0)} / ${UserService.currency}${UserService.income.toStringAsFixed(0)}',
+                _showFinancialSettings),
           ]),
           const SizedBox(height: 16),
-          _section(l.more, [
+          _section('Financial Tools & Insights', [
+            _arrowTile(Icons.description_outlined, 'Financial Report & Statement', '', _exportPdf),
+            _divider(),
             _arrowTile(Icons.chat_outlined, l.aiAssistant, '', () {
               Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const AiAssistantScreen()));
@@ -123,8 +108,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'NZD – New Zealand Dollar (NZ\$)': 'NZ\$',
     'HKD – Hong Kong Dollar (HK\$)'  : 'HK\$',
   };
-
-  static const _languages = ['English', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam', 'Bengali', 'Marathi'];
 
   // Find the display label for the currently saved symbol
   String get _currentCurrencyLabel {
@@ -241,12 +224,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => Padding(
+      builder: (sheetCtx) => Padding(
         padding: EdgeInsets.only(
             left: 24,
             right: 24,
             top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,8 +261,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   return;
                 }
                 await UserService.updateProfile(name: name, email: email);
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                if (!mounted || !sheetCtx.mounted) return;
+                Navigator.pop(sheetCtx);
                 setState(() {});
                 _snack(l.profileUpdated);
               },
@@ -291,124 +274,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showPinSetupDialog() {
-    final l = AppLocalizations.of(context);
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(l.setPin,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          maxLength: 4,
-          obscureText: true,
-          decoration: InputDecoration(hintText: l.enterPin),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l.cancel)),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              if (ctrl.text.length == 4) {
-                setState(() => _pinLock = true);
-                _snack(l.pinSet);
-              } else {
-                _snack(l.pinLength);
-              }
-            },
-            child: Text(l.save),
-          ),
-        ],
-      ),
-    );
-  }
+  void _showFinancialSettings() {
+    final currency = UserService.currency;
+    final incomeCtrl = TextEditingController(
+        text: UserService.income > 0 ? UserService.income.toStringAsFixed(0) : '');
+    final budgetCtrl = TextEditingController(
+        text: UserService.budget > 0 ? UserService.budget.toStringAsFixed(0) : '');
 
-  void _exportPdf() {
-    final l = AppLocalizations.of(context);
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(l.exportReport,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _exportOption(Icons.calendar_view_month_rounded, l.thisMonth, l),
-            _exportOption(Icons.date_range_rounded, l.last3Months, l),
-            _exportOption(Icons.calendar_today_rounded, l.thisYear, l),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l.cancel)),
-        ],
-      ),
-    );
-  }
-
-  Widget _exportOption(IconData icon, String label, AppLocalizations l) {
-    return ListTile(
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(label),
-      onTap: () {
-        Navigator.pop(context);
-        _snack('${l.generating} $label...');
-      },
-    );
-  }
-
-  void _showSplitExpenses() {
-    final l = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => Padding(
+      builder: (sheetCtx) => Padding(
         padding: EdgeInsets.only(
             left: 24,
             right: 24,
             top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l.splitExpenses,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Financial Settings',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('Adjust your base monthly income and monthly spending limit.',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
             const SizedBox(height: 20),
             TextField(
-                decoration: InputDecoration(
-                    labelText: l.expenseName,
-                    prefixIcon: const Icon(Icons.receipt_outlined))),
+              controller: incomeCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Monthly Income',
+                prefixText: '$currency ',
+                prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
+              ),
+            ),
             const SizedBox(height: 14),
             TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                    labelText: l.amount,
-                    prefixIcon: const Icon(Icons.currency_rupee))),
-            const SizedBox(height: 14),
-            TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                    labelText: l.numPeople,
-                    prefixIcon: const Icon(Icons.group_outlined))),
+              controller: budgetCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Monthly Budget Limit',
+                prefixText: '$currency ',
+                prefixIcon: const Icon(Icons.pie_chart_outline_rounded),
+              ),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _snack(l.splitCreated);
+              onPressed: () async {
+                final inc = double.tryParse(incomeCtrl.text.trim()) ?? 0.0;
+                final bud = double.tryParse(budgetCtrl.text.trim()) ?? 0.0;
+                if (inc <= 0) {
+                  _snack('Please enter a valid monthly income');
+                  return;
+                }
+                if (bud <= 0) {
+                  _snack('Please enter a valid monthly budget');
+                  return;
+                }
+                await UserService.saveSetup(
+                  income: inc,
+                  budget: bud,
+                  currency: UserService.currency,
+                  goal: UserService.goal,
+                  isStudent: UserService.isStudent,
+                );
+                if (!mounted || !sheetCtx.mounted) return;
+                context.read<ExpenseProvider>().loadExpenses();
+                Navigator.pop(sheetCtx);
+                setState(() {});
+                _snack('Financial settings updated successfully!');
               },
-              child: Text(l.splitShare),
+              child: const Text('Save Financial Settings'),
             ),
           ],
         ),
@@ -416,74 +355,280 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showLanguagePicker(AppLocalizations l) {
-    String selected = _language; // local copy for sheet state
+  void _exportPdf() {
+    final l = AppLocalizations.of(context);
+    final currency = UserService.currency;
+    final ep = context.read<ExpenseProvider>();
+
+    showDialog(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(l.exportReport, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _exportOption(Icons.calendar_view_month_rounded, l.thisMonth, () {
+              Navigator.pop(dlgCtx);
+              _showReportModal('This Month', DateTime.now().subtract(const Duration(days: 30)), ep, currency);
+            }),
+            _exportOption(Icons.date_range_rounded, l.last3Months, () {
+              Navigator.pop(dlgCtx);
+              _showReportModal('Last 3 Months', DateTime.now().subtract(const Duration(days: 90)), ep, currency);
+            }),
+            _exportOption(Icons.calendar_today_rounded, l.thisYear, () {
+              Navigator.pop(dlgCtx);
+              _showReportModal('This Year', DateTime(DateTime.now().year, 1, 1), ep, currency);
+            }),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dlgCtx), child: Text(l.cancel)),
+        ],
+      ),
+    );
+  }
+
+  Widget _exportOption(IconData icon, String label, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      title: Text(label),
+      onTap: onTap,
+    );
+  }
+
+  void _showReportModal(String periodName, DateTime since, ExpenseProvider ep, String currency) {
+    final filtered = ep.expenses.where((e) => e.date.isAfter(since)).toList();
+    final expenses = filtered.where((e) => e.isExpense).toList();
+    final incomes = filtered.where((e) => !e.isExpense).toList();
+
+    final totalSpent = expenses.fold(0.0, (s, e) => s + e.amount);
+    final extraIncome = incomes.fold(0.0, (s, e) => s + e.amount);
+    final totalIncome = UserService.income + extraIncome;
+    final netSavings = totalIncome - totalSpent;
+
+    final catTotals = <String, double>{};
+    for (final e in expenses) {
+      catTotals[e.category] = (catTotals[e.category] ?? 0) + e.amount;
+    }
+
+    final reportText = StringBuffer();
+    reportText.writeln('=== Finance AI Report ($periodName) ===');
+    reportText.writeln('User: ${UserService.name}');
+    reportText.writeln('Total Income: $currency${totalIncome.toStringAsFixed(0)}');
+    reportText.writeln('Total Expenses: $currency${totalSpent.toStringAsFixed(0)}');
+    reportText.writeln('Net Savings: $currency${netSavings.toStringAsFixed(0)}');
+    reportText.writeln('\nCategory Breakdown:');
+    catTotals.forEach((k, v) => reportText.writeln('• $k: $currency${v.toStringAsFixed(0)}'));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Financial Summary: $periodName',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
+                    children: [
+                      const Text('Income', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      Text('$currency${totalIncome.toStringAsFixed(0)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF00C853))),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      const Text('Expenses', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      Text('$currency${totalSpent.toStringAsFixed(0)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFFFF5252))),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      const Text('Net Savings', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      Text('$currency${netSavings.toStringAsFixed(0)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF00897B))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Top Categories', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 8),
+            if (catTotals.isEmpty)
+              const Text('No expenses recorded for this period', style: TextStyle(color: Colors.grey, fontSize: 13))
+            else
+              ...catTotals.entries.take(4).map((entry) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(entry.key, style: const TextStyle(fontSize: 13)),
+                        Text('$currency${entry.value.toStringAsFixed(0)}',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      ],
+                    ),
+                  )),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: reportText.toString()));
+                Navigator.pop(ctx);
+                _snack('Financial summary copied to clipboard!');
+              },
+              icon: const Icon(Icons.copy_rounded, size: 18),
+              label: const Text('Copy Summary Report'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSplitExpenses() {
+    final l = AppLocalizations.of(context);
+    final currency = UserService.currency;
+    final nameCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
+    final peopleCtrl = TextEditingController(text: '2');
+    double share = 0.0;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        maxChildSize: 0.9,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (_, scrollCtrl) => StatefulBuilder(
-          builder: (ctx, setSheet) => Column(
-            children: [
-              const SizedBox(height: 16),
-              Container(width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 16),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(l.selectLanguage,
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: ListView(
-                  controller: scrollCtrl,
-                  children: _languages.map((lang) => ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                    leading: Icon(
-                      Icons.language_outlined,
-                      color: selected == lang ? Theme.of(context).colorScheme.primary : Colors.grey,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          void updateShare() {
+            final amt = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
+            final numPeople = int.tryParse(peopleCtrl.text.trim()) ?? 1;
+            setSheetState(() {
+              share = (numPeople > 0) ? (amt / numPeople) : 0.0;
+            });
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(l.splitExpenses,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(sheetCtx)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(
+                      labelText: l.expenseName,
+                      prefixIcon: const Icon(Icons.receipt_outlined),
                     ),
-                    title: Text(lang),
-                    trailing: selected == lang
-                        ? const Icon(Icons.check_circle_rounded, color: Color(0xFF00C853))
-                        : null,
-                    onTap: () async {
-                      setSheet(() => selected = lang);  // update checkmark in sheet
-                      await UserService.setLanguage(lang); // persist to Hive
-                      // Update locale so entire app rebuilds in new language
-                      String code = 'en';
-                      switch(lang) {
-                        case 'Hindi': code = 'hi'; break;
-                        case 'Telugu': code = 'te'; break;
-                        case 'Tamil': code = 'ta'; break;
-                        case 'Kannada': code = 'kn'; break;
-                        case 'Malayalam': code = 'ml'; break;
-                        case 'Bengali': code = 'bn'; break;
-                        case 'Marathi': code = 'mr'; break;
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: amountCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) => updateShare(),
+                    decoration: InputDecoration(
+                      labelText: l.amount,
+                      prefixText: '$currency ',
+                      prefixIcon: const Icon(Icons.attach_money_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: peopleCtrl,
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => updateShare(),
+                    decoration: InputDecoration(
+                      labelText: l.numPeople,
+                      prefixIcon: const Icon(Icons.group_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (share > 0)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Each Person Pays:',
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          Text('$currency${share.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: Theme.of(context).colorScheme.primary)),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final title = nameCtrl.text.trim().isEmpty ? 'Split Expense' : nameCtrl.text.trim();
+                      if (share <= 0) {
+                        _snack('Please enter valid amount and number of people');
+                        return;
                       }
-                      localeNotifier.value = Locale(code);
-                      setState(() {}); // update subtitle on profile tile
-                      Navigator.pop(ctx);
-                      _snack('${l.langChanged} $lang');
+                      // Record user's portion into ExpenseProvider
+                      await context.read<ExpenseProvider>().addExpense(Expense(
+                        amount: share,
+                        category: 'Other',
+                        note: '$title (My share of $currency${amountCtrl.text.trim()})',
+                        date: DateTime.now(),
+                        isExpense: true,
+                      ));
+                      if (!mounted || !sheetCtx.mounted) return;
+                      Navigator.pop(sheetCtx);
+                      _snack('My share of $currency${share.toStringAsFixed(2)} added to expenses!');
                     },
-                  )).toList(),
-                ),
+                    child: Text(share > 0 ? 'Record My Share ($currency${share.toStringAsFixed(2)})' : l.splitShare),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -556,7 +701,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         currency: entry.value,
                         goal    : UserService.goal,
                       );
-                      if (!context.mounted) return;
+                      if (!mounted) return;
                       setState(() {});
                       Navigator.pop(context);
                       _snack('${l.currChanged} ${entry.value}');
@@ -592,7 +737,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () async {
               await UserService.logout();
               themeModeNotifier.value = ThemeMode.light;
-              if (!context.mounted) return;
+              if (!mounted) return;
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),

@@ -4,6 +4,7 @@ import '../models/expense.dart';
 import '../providers/expense_provider.dart';
 import '../services/user_service.dart';
 import '../services/voice_service.dart';
+import 'quick_scan.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   final int initialTab;
@@ -726,7 +727,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
                 style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const QuickScanScreen()),
+                );
+              },
               icon: const Icon(Icons.camera_alt_rounded),
               label: const Text('Open Camera'),
             ),

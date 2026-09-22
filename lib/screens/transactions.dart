@@ -420,7 +420,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _filters.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, index) =>
                             const SizedBox(width: 8),
                         itemBuilder: (_, i) {
                           final active = _filter == _filters[i];
@@ -523,9 +523,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     for (final e in list) {
       final d = DateTime(e.date.year, e.date.month, e.date.day);
       String label;
-      if (d == today)         label = 'Today';
-      else if (d == yesterday) label = 'Yesterday';
-      else                     label = '${e.date.day} ${months[e.date.month - 1]}';
+      if (d == today) {
+        label = 'Today';
+      } else if (d == yesterday) {
+        label = 'Yesterday';
+      } else {
+        label = '${e.date.day} ${months[e.date.month - 1]}';
+      }
       grouped.putIfAbsent(label, () => []).add(e);
     }
     return grouped;
@@ -544,7 +548,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final icon  = _catIcons[e.category] ?? Icons.category_rounded;
 
     return Dismissible(
-      key: Key('${e.key}_${e.amount}'),
+      key: Key('${e.key ?? e.hashCode}_${e.date.millisecondsSinceEpoch}_${e.amount}'),
       background: Container(
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
