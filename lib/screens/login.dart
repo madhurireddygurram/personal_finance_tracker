@@ -13,6 +13,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
+  late final bool _hasSavedAccount;
 
   // Login controllers
   final _loginEmailCtrl = TextEditingController();
@@ -30,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    _hasSavedAccount = UserService.hasAccount;
     _tab = TabController(length: 2, vsync: this);
     if (UserService.email.isNotEmpty) {
       _loginEmailCtrl.text = UserService.email;
@@ -49,11 +51,15 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _snack(String msg, {bool error = true}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: error ? const Color(0xFFFF5252) : Theme.of(context).colorScheme.primary,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: error
+            ? const Color(0xFFFF5252)
+            : Theme.of(context).colorScheme.primary,
+      ),
+    );
   }
 
   // ── Login ─────────────────────────────────────────────────
@@ -112,6 +118,13 @@ class _LoginScreenState extends State<LoginScreen>
       _snack('Passwords do not match');
       return;
     }
+    if (_hasSavedAccount && email == UserService.email) {
+      _snack('Account already exists. Please login instead.', error: false);
+      _loginEmailCtrl.text = email;
+      _loginPassCtrl.clear();
+      _tab.animateTo(0);
+      return;
+    }
 
     if (UserService.accountExists(email)) {
       _snack('An account with $email already exists. Please log in');
@@ -140,15 +153,21 @@ class _LoginScreenState extends State<LoginScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Reset Password',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Reset Password',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Enter your registered email address. Your password will be shown if the account exists.',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.5),
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 13,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -184,24 +203,33 @@ class _LoginScreenState extends State<LoginScreen>
                 context: context,
                 builder: (_) => AlertDialog(
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  title: const Text('Your Password',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  title: const Text(
+                    'Your Password',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   content: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.lock_open_rounded,
-                            color: Color(0xFF00C853)),
+                        const Icon(
+                          Icons.lock_open_rounded,
+                          color: Color(0xFF00C853),
+                        ),
                         const SizedBox(width: 10),
                         Text(
                           recoveredPass,
                           style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -235,47 +263,61 @@ class _LoginScreenState extends State<LoginScreen>
                 width: 76,
                 height: 76,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(22),
                 ),
-                child: const Icon(Icons.account_balance_wallet_rounded,
-                    size: 42, color: Color(0xFF00C853)),
+                child: const Icon(
+                  Icons.account_balance_wallet_rounded,
+                  size: 42,
+                  color: Color(0xFF00C853),
+                ),
               ),
               const SizedBox(height: 16),
-              const Text('Finance AI',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+              const Text(
+                'Finance AI',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 4),
-              Text('Your personal money manager',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
+              Text(
+                'Your personal money manager',
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+              ),
               const SizedBox(height: 36),
-              // Tab switcher
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: TabBar(
-                  controller: _tab,
-                  indicator: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
+              if (!_hasSavedAccount) ...[
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: TabBar(
+                    controller: _tab,
+                    indicator: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
                           color: Colors.black.withValues(alpha: 0.07),
                           blurRadius: 8,
-                          offset: const Offset(0, 2))
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    labelColor: Theme.of(context).colorScheme.primary,
+                    unselectedLabelColor: Colors.grey,
+                    dividerColor: Colors.transparent,
+                    labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+                    tabs: const [
+                      Tab(text: 'Login'),
+                      Tab(text: 'Sign Up'),
                     ],
                   ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Theme.of(context).colorScheme.primary,
-                  unselectedLabelColor: Colors.grey,
-                  dividerColor: Colors.transparent,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-                  tabs: const [Tab(text: 'Login'), Tab(text: 'Sign Up')],
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
+              ],
               // Show the correct form based on tab index
               AnimatedBuilder(
                 animation: _tab,
@@ -312,9 +354,13 @@ class _LoginScreenState extends State<LoginScreen>
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: _forgotPassword,
-            child: const Text('Forgot Password?',
-                style: TextStyle(
-                    color: Color(0xFF00C853), fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Forgot Password?',
+              style: TextStyle(
+                color: Color(0xFF00C853),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 4),
@@ -355,8 +401,7 @@ class _LoginScreenState extends State<LoginScreen>
               setState(() => _signupConfirmObscure = !_signupConfirmObscure),
         ),
         const SizedBox(height: 16),
-        ElevatedButton(
-            onPressed: _signup, child: const Text('Create Account')),
+        ElevatedButton(onPressed: _signup, child: const Text('Create Account')),
       ],
     );
   }
@@ -370,10 +415,7 @@ class _LoginScreenState extends State<LoginScreen>
     return TextField(
       controller: controller,
       keyboardType: keyboard,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-      ),
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
     );
   }
 
@@ -390,13 +432,12 @@ class _LoginScreenState extends State<LoginScreen>
         labelText: label,
         prefixIcon: const Icon(Icons.lock_outline_rounded),
         suffixIcon: IconButton(
-          icon: Icon(obscure
-              ? Icons.visibility_off_outlined
-              : Icons.visibility_outlined),
+          icon: Icon(
+            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+          ),
           onPressed: onToggle,
         ),
       ),
     );
   }
 }
-
